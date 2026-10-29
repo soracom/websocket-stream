@@ -226,3 +226,14 @@ test('truncated upgrade headers reject only the offending connection', { timeout
   await new Promise(resolve => wss.close(resolve))
   await new Promise(resolve => server.close(resolve))
 })
+
+for (const side of ['server', 'client']) {
+  test('end on an unread paused ' + side + ' stream closes without an error listener', { timeout: 10000 }, async () => {
+    const { execFile } = require('node:child_process')
+    const { promisify } = require('node:util')
+    const { stdout } = await promisify(execFile)(process.execPath, [require.resolve('./paused-end'), side], { timeout: 7000 })
+    const result = JSON.parse(stdout)
+    assert.equal(result.side, side)
+    assert(result.messagesAfterFinish > 0)
+  })
+}

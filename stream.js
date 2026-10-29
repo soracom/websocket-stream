@@ -21,6 +21,7 @@ function buildProxy (options, socketWrite, socketEnd) {
 
 function WebSocketStream(target, protocols, options) {
   var stream, socket
+  var readableEnded = false
 
   var isBrowser = process.title === 'browser'
   var isNative = !!global.WebSocket
@@ -148,6 +149,9 @@ function WebSocketStream(target, protocols, options) {
   }
 
   function socketEnd(done) {
+    // Completing _flush pushes EOF. Stop forwarding messages before resuming
+    // the transport, which may still deliver data ahead of the close frame.
+    readableEnded = true
     // Closing must make progress even when the consumer has stopped reading.
     if (typeof socket.resume === 'function') socket.resume()
     socket.close()
@@ -177,8 +181,8 @@ function WebSocketStream(target, protocols, options) {
   }
 
   function onmessage(event) {
+    if (readableEnded || stream.destroyed) return
     var data = event.data
-    if (stream.destroyed) return
     if (!Buffer.isBuffer(data)) {
       if (data instanceof ArrayBuffer) data = Buffer.from(data)
       else data = Buffer.from(data, 'utf8')
