@@ -1,5 +1,5 @@
-import * as WebSocket from 'ws';
-import * as WebSocketStream from './';
+import WebSocket = require('ws');
+import WebSocketStream = require('./');
 
 {
     let ws = new WebSocket('ws://www.host.com/path');

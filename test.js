@@ -328,8 +328,9 @@ test('typescript compilation', function(t) {
   const messages = compile(['./ts-tests.ts'], {
     noEmit: true,
     noImplicitAny: true,
-    target: ts.ScriptTarget.ES5,
-    module: ts.ModuleKind.CommonJS
+    target: ts.ScriptTarget.ES2018,
+    module: ts.ModuleKind.Node16,
+    moduleResolution: ts.ModuleResolutionKind.Node16
   })
 
   t.equal(messages.length, 0, 'no errors emitted')
