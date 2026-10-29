@@ -37,6 +37,8 @@ function WebSocketStream(target, protocols, options) {
     }
   }
 
+  if (protocols === null) protocols = undefined
+
   if (!options) options = {}
 
   if (options.objectMode === undefined) {

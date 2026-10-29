@@ -67,3 +67,7 @@ import WebSocketStream = require('./');
       stream.end(); // closes underlying socket
     });
 }
+
+{
+    const stream = WebSocketStream('ws://www.host.com/path', null, { maxPayload: 1024 });
+}

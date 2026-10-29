@@ -33,6 +33,6 @@ declare namespace WebSocketStream {
 }
 
 declare function WebSocketStream(target: string | WebSocket, options?: WebSocketStream.ClientOptions): WebSocketStream.WebSocketDuplex;
-declare function WebSocketStream(target: string | WebSocket, protocols?: string | string[], options?: WebSocketStream.ClientOptions): WebSocketStream.WebSocketDuplex;
+declare function WebSocketStream(target: string | WebSocket, protocols?: string | string[] | null, options?: WebSocketStream.ClientOptions): WebSocketStream.WebSocketDuplex;
 
 export = WebSocketStream;

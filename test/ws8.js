@@ -237,3 +237,26 @@ for (const side of ['server', 'client']) {
     assert(result.messagesAfterFinish > 0)
   })
 }
+
+test('explicit null protocols preserve third-argument options', { timeout: 5000 }, async t => {
+  const server = websocket.createServer({ host: '127.0.0.1', port: 0 })
+  t.after(async () => {
+    for (const socket of server.clients) socket.terminate()
+    await new Promise(resolve => server.close(resolve))
+  })
+  await once(server, 'listening')
+  const accepted = once(server, 'stream')
+  const client = websocket('ws://127.0.0.1:' + server.address().port, null, {
+    headers: { 'x-test-null-protocol': 'preserved' },
+    highWaterMark: 16384
+  })
+  t.after(() => client.socket.terminate())
+  const [peer, request] = await accepted
+  assert.equal(request.headers['x-test-null-protocol'], 'preserved')
+  assert.equal(peer.socket.protocol, '')
+  peer.pipe(peer)
+  const response = once(client, 'data')
+  client.write('null protocols')
+  assert.equal((await response)[0].toString(), 'null protocols')
+  client.end()
+})
