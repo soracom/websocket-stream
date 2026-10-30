@@ -108,7 +108,8 @@ function WebSocketStream(target, protocols, options) {
   var read = proxy._read
   proxy._read = function (size) {
     read.call(this, size)
-    if (!this.destroyed && socket.readyState === socket.OPEN && typeof socket.resume === 'function') {
+    // A direct socket.close() still needs reads to receive the peer's close frame.
+    if (!this.destroyed && (socket.readyState === socket.OPEN || socket.readyState === socket.CLOSING) && typeof socket.resume === 'function') {
       socket.resume()
     }
   }

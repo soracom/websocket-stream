@@ -228,6 +228,17 @@ test('truncated upgrade headers reject only the offending connection', { timeout
 })
 
 for (const side of ['server', 'client']) {
+  test('reading a paused ' + side + ' stream after socket.close completes the handshake', { timeout: 10000 }, async () => {
+    const { execFile } = require('node:child_process')
+    const { promisify } = require('node:util')
+    // The default WebSocket close timeout is 30 seconds; it must not be needed.
+    const { stdout } = await promisify(execFile)(process.execPath, [require.resolve('./paused-close'), side], { timeout: 5000 })
+    const result = JSON.parse(stdout)
+    assert.equal(result.side, side)
+    assert.equal(result.received, 2 * 1024 * 1024)
+    assert(result.resumesWhileClosing > 0)
+  })
+
   test('end on an unread paused ' + side + ' stream closes without an error listener', { timeout: 10000 }, async () => {
     const { execFile } = require('node:child_process')
     const { promisify } = require('node:util')
