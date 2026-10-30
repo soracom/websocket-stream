@@ -143,12 +143,7 @@ First start the echo server by running `node test-server.js`
 
 Then run `npm start` and open `localhost:9966` in your browser and open the Dev Tools console to see test output.
 
-## license
-
-BSD LICENSE
-
-
-### ws 8 compatibility
+## ws 8 compatibility
 
 The Node transport uses ws 8.22.0. Receive backpressure now pauses the WebSocket
 when the readable stream fills, and resumes it when the consumer reads again.
@@ -178,3 +173,7 @@ before reading. Its receiver RSS allowance is
 `connections * (2 * maxPayload + 4 MiB) + 64 MiB` above the warmed baseline
 (880 MiB for four connections), accounting for fragment storage and contiguous
 reconstruction. This is a test budget, not an enforced connection limit.
+
+## license
+
+BSD LICENSE
