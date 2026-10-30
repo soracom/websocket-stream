@@ -143,6 +143,37 @@ First start the echo server by running `node test-server.js`
 
 Then run `npm start` and open `localhost:9966` in your browser and open the Dev Tools console to see test output.
 
+## ws 8 compatibility
+
+The Node transport uses ws 8.22.0. Receive backpressure now pauses the WebSocket
+when the readable stream fills, and resumes it when the consumer reads again.
+`highWaterMark` applies to both the connecting wrapper and its underlying stream.
+The browser transport keeps its existing buffering policy.
+
+WebSocket EventTarget listeners coexist with existing handlers. Stream errors
+carry the original `Error` (including its `code`), rather than an `ErrorEvent`.
+Binary Buffers are passed through without a redundant copy; callers should treat
+received data as shared with other WebSocket listeners.
+
+`maxPayload`, `maxFragments`, and `maxBufferedChunks` are forwarded to ws. The
+latter two limit incomplete-message fragmentation independently of payload size.
+See the [ws API](https://github.com/websockets/ws/blob/8.22.0/doc/ws.md) for details.
+
+Run `npm test` on Node 22 for legacy API, type, browser EventTarget, receive-limit,
+and pause/resume regressions. Extended isolated measurements are available via
+`timeout 120s node --expose-gc test/backpressure.js receiver upload 64 0`.
+Use `upload` or `download`, 64 or 256 MiB, and 0 or 64 KiB/s. Each case holds the
+receiver for 30 seconds before draining and checks the transferred SHA-256,
+4 MiB buffer budget, 64 MiB RSS increase, and 8 MiB late RSS growth. Set
+`RESULT_FILE` to retain 100 ms samples. Kernel socket buffers are not included.
+
+The maximum-message measurement uses
+`timeout 120s node --expose-gc test/memory.js 4`. It holds four 100 MiB messages
+before reading. Its receiver RSS allowance is
+`connections * (2 * maxPayload + 4 MiB) + 64 MiB` above the warmed baseline
+(880 MiB for four connections), accounting for fragment storage and contiguous
+reconstruction. This is a test budget, not an enforced connection limit.
+
 ## license
 
 BSD LICENSE

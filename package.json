@@ -4,7 +4,7 @@
   "license": "BSD-2-Clause",
   "description": "Use websockets with the node streams API. Works in browser and node",
   "scripts": {
-    "test": "node test.js",
+    "test": "node test.js && node --test test/ws8.js",
     "start": "beefy test-client.js"
   },
   "repository": {
@@ -27,19 +27,18 @@
     "inherits": "^2.0.1",
     "readable-stream": "^2.3.3",
     "safe-buffer": "^5.1.2",
-    "ws": "^3.2.0",
+    "ws": "8.22.0",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "^11.13.4",
-    "@types/ws": "^6.0.1",
+    "@types/node": "22.20.5",
+    "@types/ws": "8.18.2",
     "beefy": "^2.1.8",
     "browserify": "^16.2.3",
     "concat-stream": "^1.6.2",
     "tape": "^4.9.1",
-    "typescript": "^3.4.3"
+    "typescript": "6.0.3"
   },
-  "optionalDependencies": {},
   "browser": {
     "./echo-server.js": "./fake-server.js",
     "./index.js": "./stream.js",
@@ -50,5 +49,17 @@
   },
   "homepage": "https://github.com/maxogden/websocket-stream#readme",
   "main": "index.js",
-  "author": ""
+  "author": "",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "stream.js",
+    "server.js",
+    "ws-fallback.js",
+    "readme.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=10.0.0"
+  }
 }

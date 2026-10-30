@@ -1,5 +1,5 @@
-import * as WebSocket from 'ws';
-import * as WebSocketStream from './';
+import WebSocket = require('ws');
+import WebSocketStream = require('./');
 
 {
     let ws = new WebSocket('ws://www.host.com/path');
@@ -66,4 +66,8 @@ import * as WebSocketStream from './';
       stream.write(stream.read());
       stream.end(); // closes underlying socket
     });
+}
+
+{
+    const stream = WebSocketStream('ws://www.host.com/path', null, { maxPayload: 1024 });
 }

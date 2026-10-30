@@ -9,7 +9,8 @@ module.exports = WebSocketStream
 
 function buildProxy (options, socketWrite, socketEnd) {
   var proxy = new Transform({
-    objectMode: options.objectMode
+    objectMode: options.objectMode,
+    highWaterMark: options.highWaterMark
   })
 
   proxy._write = socketWrite
@@ -20,6 +21,7 @@ function buildProxy (options, socketWrite, socketEnd) {
 
 function WebSocketStream(target, protocols, options) {
   var stream, socket
+  var readableEnded = false
 
   var isBrowser = process.title === 'browser'
   var isNative = !!global.WebSocket
@@ -28,12 +30,14 @@ function WebSocketStream(target, protocols, options) {
   if (protocols && !Array.isArray(protocols) && 'object' === typeof protocols) {
     // accept the "options" Object as the 2nd argument
     options = protocols
-    protocols = null
+    protocols = undefined
 
     if (typeof options.protocol === 'string' || Array.isArray(options.protocol)) {
       protocols = options.protocol;
     }
   }
+
+  if (protocols === null) protocols = undefined
 
   if (!options) options = {}
 
@@ -69,17 +73,14 @@ function WebSocketStream(target, protocols, options) {
     socket.binaryType = 'arraybuffer'
   }
   
-  // according to https://github.com/baygeldin/ws-streamify/issues/1
-  // Nodejs WebSocketServer cause memory leak
-  // Handlers like onerror, onclose, onmessage and onopen are accessible via setter/getter
-  // And setter first of all fires removeAllListeners, that doesnt make inner array of clients on WebSocketServer cleared ever
-  var eventListenerSupport = ('undefined' === typeof socket.addEventListener)
+  // EventTarget listeners preserve handlers installed by the caller and ws.
+  var eventListenerSupport = typeof socket.addEventListener === 'function'
 
   // was already open when passed in
   if (socket.readyState === socket.OPEN) {
     stream = proxy
   } else {
-    stream = stream = duplexify(undefined, undefined, options)
+    stream = duplexify(undefined, undefined, options)
     if (!options.objectMode) {
       stream._writev = writev
     }
@@ -101,6 +102,16 @@ function WebSocketStream(target, protocols, options) {
      socket.onclose = onclose
      socket.onerror = onerror
      socket.onmessage = onmessage
+  }
+
+  // Preserve Transform's write/read coordination while propagating demand to ws.
+  var read = proxy._read
+  proxy._read = function (size) {
+    read.call(this, size)
+    // A direct socket.close() still needs reads to receive the peer's close frame.
+    if (!this.destroyed && (socket.readyState === socket.OPEN || socket.readyState === socket.CLOSING) && typeof socket.resume === 'function') {
+      socket.resume()
+    }
   }
 
   proxy.on('close', destroy)
@@ -141,11 +152,17 @@ function WebSocketStream(target, protocols, options) {
   }
 
   function socketEnd(done) {
+    // Completing _flush pushes EOF. Stop forwarding messages before resuming
+    // the transport, which may still deliver data ahead of the close frame.
+    readableEnded = true
+    // Closing must make progress even when the consumer has stopped reading.
+    if (typeof socket.resume === 'function') socket.resume()
     socket.close()
     done()
   }
 
   function onopen() {
+    if (stream.destroyed) return destroy()
     stream.setReadable(proxy)
     stream.setWritable(proxy)
     stream.emit('connect')
@@ -156,18 +173,30 @@ function WebSocketStream(target, protocols, options) {
     stream.destroy()
   }
 
-  function onerror(err) {
+  function onerror(event) {
+    var err = event && event.error ? event.error : event
+    if (!(err instanceof Error)) {
+      var normalized = new Error(err && err.message ? err.message : String(err))
+      if (err && err.code !== undefined) normalized.code = err.code
+      err = normalized
+    }
     stream.destroy(err)
   }
 
   function onmessage(event) {
+    if (readableEnded || stream.destroyed) return
     var data = event.data
-    if (data instanceof ArrayBuffer) data = Buffer.from(data)
-    else data = Buffer.from(data, 'utf8')
-    proxy.push(data)
+    if (!Buffer.isBuffer(data)) {
+      if (data instanceof ArrayBuffer) data = Buffer.from(data)
+      else data = Buffer.from(data, 'utf8')
+    }
+    // push() may synchronously call a data handler which ends the stream.
+    // Do not undo socketEnd's resume once local EOF has been committed.
+    if (!proxy.push(data) && !readableEnded && !stream.destroyed && (socket.readyState === socket.OPEN || socket.readyState === socket.CLOSING) && typeof socket.pause === 'function') socket.pause()
   }
 
   function destroy() {
+    if (typeof socket.resume === 'function') socket.resume()
     socket.close()
   }
 
