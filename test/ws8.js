@@ -228,6 +228,22 @@ test('truncated upgrade headers reject only the offending connection', { timeout
 })
 
 for (const side of ['server', 'client']) {
+  for (const mode of ['drain', 'end']) {
+    test('closing backpressure on the ' + side + ' stream: ' + mode, { timeout: 10000 }, async () => {
+      const { execFile } = require('node:child_process')
+      const { promisify } = require('node:util')
+      const { stdout } = await promisify(execFile)(process.execPath, [require.resolve('./closing-backpressure'), side, mode], { timeout: 7000 })
+      const result = JSON.parse(stdout)
+      assert.equal(result.side, side)
+      assert.equal(result.mode, mode)
+      if (mode === 'drain') {
+        assert.equal(result.received, 8 * 1024 * 1024)
+        assert(result.maxBuffered <= 4 * 1024 * 1024)
+        assert(result.closingPauses > 0)
+      } else assert(result.endedInMessage)
+    })
+  }
+
   test('reading a paused ' + side + ' stream after socket.close completes the handshake', { timeout: 10000 }, async () => {
     const { execFile } = require('node:child_process')
     const { promisify } = require('node:util')

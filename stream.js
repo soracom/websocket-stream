@@ -190,7 +190,9 @@ function WebSocketStream(target, protocols, options) {
       if (data instanceof ArrayBuffer) data = Buffer.from(data)
       else data = Buffer.from(data, 'utf8')
     }
-    if (!proxy.push(data) && !stream.destroyed && socket.readyState === socket.OPEN && typeof socket.pause === 'function') socket.pause()
+    // push() may synchronously call a data handler which ends the stream.
+    // Do not undo socketEnd's resume once local EOF has been committed.
+    if (!proxy.push(data) && !readableEnded && !stream.destroyed && (socket.readyState === socket.OPEN || socket.readyState === socket.CLOSING) && typeof socket.pause === 'function') socket.pause()
   }
 
   function destroy() {
